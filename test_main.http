@@ -1,0 +1,64 @@
+# 用户注册
+POST http://127.0.0.1:8000/api/user/register
+Content-Type: application/json
+
+{
+  "username": "test002",
+  "password": "123456"
+}
+
+###
+
+# 用户登录
+POST http://127.0.0.1:8000/api/user/login
+Content-Type: application/json
+
+{
+  "username": "001",
+  "password": "1234567"
+}
+
+###
+
+# 获取用户信息
+GET http://127.0.0.1:8000/api/user/info
+Authorization: Bearer 030ad204-549a-49e3-afe3-a8b2ef0cd430
+Accept: application/json
+
+###
+
+# 修改用户信息
+PUT http://127.0.0.1:8000/api/user/update
+Authorization: Bearer 030ad204-549a-49e3-afe3-a8b2ef0cd430
+Content-Type: application/json
+
+{
+  "nickname": "测试用户",
+  "avatar": "https://example.com/avatar.png",
+  "gender": "unknown",
+  "bio": "这是一个测试账号",
+  "phone": "13800138000"
+}
+
+###
+
+# 修改密码
+PUT http://127.0.0.1:8000/api/user/password
+Authorization: Bearer fadc083d-4e83-422f-bfc2-f3e4a4eb2353
+Content-Type: application/json
+
+{
+  "oldPassword": "1234567",
+  "newPassword": "123456"
+}
+
+###
+
+# 使用新密码重新登录
+POST http://127.0.0.1:8000/api/user/login
+Content-Type: application/json
+
+{
+  "username": "001",
+  "password": "1234567"
+}
