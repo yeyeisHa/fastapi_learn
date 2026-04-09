@@ -3,8 +3,11 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.news import Category, News
-from cache.news_cache import get_cached_categories, set_cache_categories
-
+from cache.news_cache import get_cached_categories, set_cache_categories, get_cache_news_list, set_cache_news_list, \
+    get_cached_news_detail, cache_news_detail, get_cached_related_news, cache_related_news
+from models.news import Category, News
+from schemas.base import NewsItemBase
+from schemas.news import NewsDetailResponse, RelatedNewsResponse
 async def get_categories(db:AsyncSession,skip:int = 0,limit:int = 100):
     cache_categories = await get_cached_categories()
     if cache_categories:
@@ -35,9 +38,21 @@ async def get_news_count(db:AsyncSession,category_id:int):
 
 # 获取新闻详情
 async def get_news_detail(db:AsyncSession,news_id:int):
+
+    cached_news = await get_cached_news_detail(news_id)
+    if cached_news:
+        return News(**cached_news)
+
     stmt = select(News).where(News.id == news_id)
     result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    news = result.scalar_one_or_none()
+
+    if news:
+        new_dict = NewsDetailResponse.model_validate(news).model_dump(
+            by_alias=False,mode="json",exclude={"related_news"}
+        )
+        await cache_news_detail(news_id,new_dict)
+    return  news
 
 
 # 更新新闻浏览量
@@ -50,19 +65,24 @@ async def increase_news_views(db:AsyncSession,news_id:int):
 
 # 获取相关新闻列表
 async def get_related_news(db:AsyncSession,news_id:int,category_id:int,limit:int = 5):
+
+    cache_related = await get_cached_related_news(news_id,category_id)
+    if cache_related:
+        return cache_related
+
     stmt = (select(News).where(News.category_id == category_id).where(News.id != news_id).
             order_by(News.views.desc(),
                      News.publish_time.desc())
             .limit(limit))
     result = await db.execute(stmt)
     related_news =  result.scalars().all()
-    return [{
-        "id": news_detail.id,
-        "title": news_detail.title,
-        "content": news_detail.content,
-        "image": news_detail.image,
-        "author": news_detail.author,
-        "publishTime": news_detail.publish_time,
-        "categoryId": news_detail.category_id,
-        "views": news_detail.views
-    } for news_detail in related_news]
+
+    if related_news:
+        related_data = [
+            RelatedNewsResponse.model_validate(news).model_dump(by_alias=False,mode="json")
+            for news in related_news
+        ]
+        await cache_related_news(news_id,category_id,related_data)
+        return related_data
+    return []
+
